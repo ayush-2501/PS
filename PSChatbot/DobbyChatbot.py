@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from groq import Groq
 from pinecone import Pinecone
 from nltk.tokenize import sent_tokenize
+from playwright.sync_api import sync_playwright
 import numpy as np
 load_dotenv()
 
@@ -106,6 +107,27 @@ def create_document_assistant(client, file_path):
         )
     return assistant, file, assistant_type
 
+def fetch_url_content(url):
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
+        page = browser.new_page()
+
+        try:
+            page.goto(url, wait_until='networkidle')
+
+            page.evaluate("""
+                document.querySelectorAll('header, footer').forEach(el => el.remove());
+            """)
+
+            text = page.evaluate('document.body.innerText')
+            
+            cleaned_text = ' '.join(text.split())
+            browser.close()
+            return cleaned_text
+        except Exception as e:
+            browser.close()
+            return f"Error fetching content from URL: {e}"
+
 def main():
     client = OpenAI()
     chat_history = []
@@ -114,6 +136,7 @@ def main():
     asin_flag = False
     amazon_flag = False
     amazon_context = False
+    url = None
 
     # Always show this initial message to the first time users
     greeting = "Dobby: Hello, I'm Dobby :robot_face: from ProductScope...how can I help you?"
@@ -152,11 +175,11 @@ def main():
                 break
 
             # Check if Amazon context in on (if Pro user enables it)
-            if not amazon_context:
+            if amazon_context == True:
                 amazon_flag = True
                 client = OpenAI()
                 pc = Pinecone()
-                index_name = 'ps-faq'
+                index_name = 'ps-amazon'
                 pinecone_index = pc.Index(index_name)
 
                 query_embeddings = get_embedding(user_query)
@@ -188,14 +211,47 @@ def main():
                     Start all responses without fluff words like "What a delightful task! As Dobby, I'll be happy to help" etc. Get straight to the response the user requests."""
                 }
 
+            #Code for Web Search
+            url_pattern = re.compile(r'(https?://\S+)')
+            match = url_pattern.search(user_query)
+            if match:
+                url = match.group(0)
+                url_content = fetch_url_content(url)
+                context = "URL Data: " + "\n" + url_content
+
+                sys_prompt = {
+                    "role": "system",
+                    "content": f"""Your name is Dobby and you are an expert Amazon Seller with vast knowledge about product development and marketing on Amazon and general e-commerce experience.
+                    The traits of AI include expert knowledge, helpfulness, cleverness, and articulateness.
+                    You are a big fan of ProductScope AI and its software tools that help brands with improving their product conversion rates.
+                    You are always friendly, kind, and inspiring, and eager to provide vivid and thoughtful responses to the user.
+                    START CONTEXT BLOCK
+                    {context}
+                    END CONTEXT BLOCK
+                    AI assistant will take into account any CONTEXT BLOCK that is provided in a conversation.
+                    If the context does not provide the answer to the question, you will say, "I'm sorry, but I don't know the answer to that question".
+                    Dobby, the AI assistant will not apologize for previous responses, but instead will indicate new information was gained.
+                    Dobby, the AI assistant will not invent anything that is not drawn directly from the context.
+                    For any general questions or FAQ about ProductScope AI's tools to always reply with - that's a good question but for all ProductScope AI general questions I highly recommend clicking on the chat widget at the bottom right of your screen and speaking with Kai (my AI brother that's trained specifically on ProductScope's tools and support.
+                    Start all responses without fluff words like "What a delightful task! As Dobby, I'll be happy to help" etc. Get straight to the response the user requests.
+                    START CONVERSATION HISTORY
+                    {chat_history}
+                    END CONVERSATION HISTORY"""
+                }
+
+                if not chat_history:
+                    chat_history.append(sys_prompt)
+                else:
+                    chat_history[0] = sys_prompt
+
             # Check for ASIN applicable for both normal and pro user
-            asin_matches = re.findall(r'@(\w+)', user_query)
+            asin_pattern = re.compile(r'@(\w+)')
+            asin_matches = asin_pattern.findall(user_query)
             if asin_matches:
                 context_sentences = []
                 for asin in asin_matches:
                     product_info = get_product_from_s3(asin)
                     if product_info:
-                        asin_flag = True
                         product_data = preprocess_product_data(product_info)
                         if product_data["title"]:
                             context_sentences.append(f"Title: {product_data['title']}")
@@ -207,10 +263,8 @@ def main():
                             context_sentences.append(f"Description: {product_data['description']}")
                     else:
                         context_sentences.append(f"There is no product associated with ASIN: {asin}")
-                        asin_flag = False
-                
 
-                context = "Asin Data: " +' '.join(context_sentences)
+                context = "Asin Data: " + '\n'.join(context_sentences)
 
                 sys_prompt = {
                     "role": "system",
@@ -237,14 +291,14 @@ def main():
                     chat_history.append(sys_prompt)
                 else:
                     chat_history[0] = sys_prompt
-            
+
             # If file is uploaded then only it will be passed on to create assistant
             if file_path:
                 assistant, file, assistant_type = create_document_assistant(client, file_path)
 
             chat_history.append({"role": "user", "content": user_query})
 
-            limited_history = chat_history[-4:]
+            limited_history = chat_history[-5:]
 
             if assistant:
                 if assistant_type == 1:
@@ -397,7 +451,7 @@ def main():
                 # ASIN-based assistant for Normal user or If user asks questions related to asin only
                 client = Groq()
 
-                response = client.chat.completions.create(model="llama3-8b-8192", messages=limited_history)
+                response = client.chat.completions.create(model="llama-3.1-70b-versatile", messages=limited_history)
 
                 assistant_response = response.choices[0].message.content
 
