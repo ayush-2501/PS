@@ -59,6 +59,8 @@ def llm_bot(prompt):
         ]
     )
 
+    return response.choices[0].message.content
+
 def main():
     PRIMARY_KEYWORD = input("Enter Primary Keyword: ")
     results = google_search(PRIMARY_KEYWORD, api_key, cse_id)
@@ -93,7 +95,7 @@ def main():
 
             2. These are the top five search results for the primary keyword.
             <search_results>
-            {SEARCH_RESULTS}
+            {search_results}
             </search_results>
 
             3. For each of the top 5 pages, conduct a thorough analysis following these steps:
@@ -103,6 +105,7 @@ def main():
             d. Count the words in each article
 
             4. Present your analysis for each page in the following format:
+            [Insert Page Number as Page 1...]
             <page_analysis>
             <url>[Insert URL of the page]</url>
             <article_type>[Insert article type]</article_type>
@@ -110,6 +113,7 @@ def main():
             - [List key themes and structural elements]
             </themes_and_structure>
             <search_intent>[Insert identified search intent]</search_intent>
+            <word_count>[Insert count the words]</word_count>
             </page_analysis>
 
             5. After analyzing all 5 pages, provide a summary of your overall findings. Include:
@@ -129,6 +133,7 @@ def main():
             <additional_observations>
             - [List any notable patterns or unique observations]
             </additional_observations>
+            <target_article_word_count>[Suggest an approximate word count]</target_article_word_count>
             </summary>
 
             6. Ensure that your analysis is thorough, objective, and provides valuable insights for understanding the SERP landscape for the given keyword.
