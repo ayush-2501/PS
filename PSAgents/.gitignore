@@ -1,2 +1,7 @@
 .env
 note.txt
+test.py
+test.js
+node_modules
+package-lock.json
+package.json

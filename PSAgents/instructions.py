@@ -1,13 +1,47 @@
 from openai import OpenAI
+from anthropic import Anthropic
 from dotenv import load_dotenv
 load_dotenv()
 import requests
+import re
 import os
 import time
+import xml.etree.ElementTree as ET
 from playwright.sync_api import sync_playwright
 
 api_key = os.getenv("API_KEY")
 cse_id = os.getenv("CSE_ID")
+
+def extract_xml_url(sitemap_url):
+    response = requests.get(sitemap_url)
+    sitemap_content = response.content
+    root = ET.fromstring(sitemap_content)
+    namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
+    urls = [url.find('ns:loc', namespace).text for url in root.findall('ns:url', namespace)]
+    return urls
+'''
+import axios from 'axios';
+import { JSDOM } from 'jsdom';
+
+async function extractXmlUrl(sitemapUrl) {
+    try {
+        const response = await axios.get(sitemapUrl);
+        const sitemapContent = response.data;
+
+        const dom = new JSDOM(sitemapContent);
+        const document = dom.window.document;
+
+        const urls = [...document.querySelectorAll('url loc')].map(loc => loc.textContent);
+
+        return urls;
+    } catch (error) {
+        console.error('Error fetching or parsing the sitemap:', error);
+        return [];
+    }
+}
+
+extractXmlUrl('https://productscope.ai/post-sitemap.xml').then(urls => console.log(urls));
+'''
 
 def fetch_url_content(url):
     with sync_playwright() as p:
@@ -29,8 +63,28 @@ def fetch_url_content(url):
         except Exception as e:
             browser.close()
             return f"Error fetching content from URL: {e}"
+'''
+import axios from 'axios';
+import cheerio from 'cheerio';
 
-def google_search(query, api_key, cse_id, num_results=5):
+async function fetchUrlContent(url) {
+    try {
+        const { data: html } = await axios.get(url);
+
+        const $ = cheerio.load(html);
+
+        $('script, style, header, footer, noscript').remove();
+
+        const text = $('body').text().trim().replace(/\s+/g, ' ');
+
+        return text;
+    } catch (error) {
+        return `Error fetching content from URL: ${error.message}`;
+    }
+}
+'''
+
+def google_search(query, api_key, cse_id, num_results=3):
     exclude_domains = ["youtube.com", "reddit.com"]
     url = "https://www.googleapis.com/customsearch/v1"
     params = {
@@ -49,25 +103,104 @@ def google_search(query, api_key, cse_id, num_results=5):
     else:
         print(f"Error: {response.status_code}")
         return None
+'''
+async function googleSearch(query, apiKey, cseId, numResults = 3) {
+    const excludeDomains = ["youtube.com", "reddit.com"];
+    const url = "https://www.googleapis.com/customsearch/v1";
+    const params = {
+        q: query,
+        key: apiKey,
+        cx: cseId,
+        num: numResults,
+    };
+
+    if (excludeDomains.length > 0) {
+        const excludeTerms = excludeDomains.map(domain => `-site:${domain}`).join(' ');
+        params.q += ` ${excludeTerms}`;
+    }
+
+    try {
+        const response = await axios.get(url, { params });
+        return response.data;
+    } catch (error) {
+        console.error(`Error: ${error.response ? error.response.status : error.message}`);
+        return null;
+    }
+}
+'''
 
 def llm_bot(prompt, model):
-    client = OpenAI()
     if model == "gpt-4o-mini":
-       response = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "user", "content": prompt}
-            ]
-        )
-    elif model == "gpt-4o":
+        client = OpenAI()
         response = client.chat.completions.create(
             model=model,
             messages=[
                 {"role": "user", "content": prompt}
             ]
         )
+        return response.choices[0].message.content
 
-    return response.choices[0].message.content
+    elif model == "gpt-4o":
+        client = OpenAI()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.choices[0].message.content
+
+    elif model == "claude-3-5-sonnet-20240620":
+        client = Anthropic()
+        response = client.messages.create(
+            model=model,
+            max_tokens=2048,
+            temperature=0,
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.content[0].text
+'''
+import OpenAI from 'openai';
+import Anthropic from 'anthropic';
+
+const openai = new OpenAI({ apiKey: 'YOUR_OPENAI_API_KEY' });
+const anthropic = new Anthropic({ apiKey: 'YOUR_ANHTROPIC_API_KEY' });
+
+async function llmBot(prompt, model) {
+    try {
+        let response;
+
+        if (model === "gpt-4o-mini" || model === "gpt-4") {
+            response = await openai.chat.completions.create({
+                model: model,
+                messages: [
+                    { role: "user", content: prompt }
+                ]
+            });
+            return response.choices[0].message.content;
+
+        } else if (model === "claude-3-5-sonnet-20240620") {
+            response = await anthropic.messages.create({
+                model: model,
+                max_tokens: 2048,
+                temperature: 0,
+                messages: [
+                    { role: "user", content: prompt }
+                ]
+            });
+            return response.content[0].text;
+
+        } else {
+            throw new Error("Unknown model type");
+        }
+    } catch (error) {
+        console.error("Error in llmBot:", error.message);
+        throw error;
+    }
+}
+'''
 
 def main():
     PRIMARY_KEYWORD = input("Enter Primary Keyword: ")
@@ -75,7 +208,36 @@ def main():
     results = google_search(PRIMARY_KEYWORD, api_key, cse_id)
 
     search_results = []
+    '''
+    (async function main() {
+        const apiKey = 'YOUR_API_KEY'; 
+        const cseId = 'YOUR_CSE_ID';   
 
+        const PRIMARY_KEYWORD = prompt("Enter Primary Keyword: ");
+        const SECONDARY_KEYWORDS = prompt("Enter Secondary Keyword: ");
+        const results = await googleSearch(PRIMARY_KEYWORD, apiKey, cseId);
+
+        const search_results = [];
+
+        if (results && results.items) {
+            for (const item of results.items) {
+                const title = item.title;
+                const link = item.link;
+
+                // Fetch URL content using the local function
+                const content = await fetchUrlContent(link);
+                const result = {
+                    pageUrl: link,
+                    pageTitle: title,
+                    pageContent: content
+                };
+                search_results.push(result);
+            }
+        }
+
+        console.log(search_results);
+    })();
+    '''
     if results:
         for item in results.get('items', []):
             title = item['title']
@@ -89,7 +251,7 @@ def main():
             }
             search_results.append(result)
         
-        prompt_1 = f"""You are an expert SEO analyst tasked with analyzing the top 5 SERP (Search Engine Results Page) results for a given primary keyword. Your goal is to provide valuable insights into the content structure, themes, and search intent for each result. Follow these instructions carefully:
+        prompt_1 = f"""You are an expert SEO analyst tasked with analyzing the top 3 SERP (Search Engine Results Page) results for a given primary keyword. Your goal is to provide valuable insights into the content structure, themes, and search intent for each result. Follow these instructions carefully:
 
             1. The primary keyword for analysis is:
             <primary_keyword>
@@ -101,7 +263,7 @@ def main():
             {search_results}
             </search_results>
 
-            3. For each of the top 5 pages, conduct a thorough analysis following these steps:
+            3. For each of the top 3 pages, conduct a thorough analysis following these steps:
             a. Determine the article type (e.g., listicle, how-to guide, product review, informational article, etc.)
             b. Identify common themes and structures within the content
             c. Note the search intent of the keyword based on the content (e.g., informational, transactional, navigational, commercial investigation)
@@ -116,10 +278,10 @@ def main():
             - [List key themes and structural elements]
             </themes_and_structure>
             <search_intent>[Insert identified search intent]</search_intent>
-            <word_count>[Insert count the words]</word_count>
+            <word_count>[Insert the word count]</word_count>
             </page_analysis>
 
-            5. After analyzing all 5 pages, provide a summary of your overall findings. Include:
+            5. After analyzing all 3 pages, provide a summary of your overall findings. Include:
             a. The most common article type
             b. Recurring themes across the top results
             c. The predominant search intent
@@ -145,6 +307,13 @@ def main():
         
         TOP_5_ARTICLES_SUMMARY = llm_bot(prompt, "gpt-4o-mini")
         print(TOP_5_ARTICLES_SUMMARY)
+        pattern = re.compile(r"<target_article_word_count>(\d+)</target_article_word_count>")
+        match = pattern.search(TOP_5_ARTICLES_SUMMARY)
+        if match:
+            DESIRED_WORD_COUNT = match.group(1)
+            print("Target Article Word Count:", target_word_count)
+        else:
+            print("Target Article Word Count not found.")
         
         prompt_2 = f"""You are an expert content researcher and outline creator. Your task is to analyze the summary of the top 5 articles for a given primary search query, the secondary keywords and then create an improved blog outline for a new article to rank for that search query. Follow these steps carefully:
 
@@ -207,7 +376,7 @@ def main():
             </primary_keywords>
 
             <target_audience>
-            {TARGET_AUDIENCE}
+            Founders, Content Creators & Marketers
             </target_audience>
 
             Now, create 3-5 title options following these guidelines:
@@ -236,14 +405,14 @@ def main():
 
             Remember to generate at least 3 and no more than 5 title options. Ensure that each title is unique and follows all the guidelines provided."""
 
-        CONTENT = llm_bot(prompt_3, "gpt-4o")
-        print(CONTENT)
+        TITLE_OPTIONS = llm_bot(prompt_3, "gpt-4o")
+        print(TITLE_OPTIONS)
 
         prompt_4 = f"""You are an expert at crafting compelling meta descriptions for web content. Your task is to create a meta description that accurately summarizes the given content, includes the primary keyword, and entices users to click through to the webpage.
 
             Here is the content to summarize:
             <content>
-            {CONTENT}
+            {CONTENT_OUTLINE}
             </content>
 
             The primary keyword to include in the meta description is:
@@ -267,16 +436,19 @@ def main():
 
             Please provide your crafted meta description within <meta_description> tags."""
         
-        prompt_5 """You are an expert at selecting the most relevant internal product link for a blog post based on its content outline and primary keyword. Your task is to review the given information and choose the most appropriate internal link from a list of product landing pages.
+        META_DESCRIPTION = llm_bot(prompt_4, "gpt-4o")
+        print(META_DESCRIPTION)
+
+        prompt_5 = f"""You are an expert at selecting the most relevant internal product link for a blog post based on its content outline and primary keyword. Your task is to review the given information and choose the most appropriate internal link from a list of product landing pages.
 
             First, carefully review the following information:
 
             <content_outline>
-            {{CONTENT_OUTLINE}}
+            {CONTENT_OUTLINE}
             </content_outline>
 
             <primary_keyword>
-            {{PRIMARY_KEYWORD}}
+            {PRIMARY_KEYWORD}
             </primary_keyword>
 
             Now, follow these steps to complete the task:
@@ -317,21 +489,26 @@ def main():
 
             Remember, your goal is to choose the most relevant internal product link that will add value to the blog post and enhance the reader's experience."""
 
-        prompt_6 = """You are tasked with selecting 5 to 10 additional internal links for an article based on a given content outline and primary keyword. This task is crucial for improving the website's internal linking structure and enhancing the overall SEO performance. Follow these instructions carefully:
+        PRODUCT_LINK = llm_bot(prompt_5, "gpt-4o")
+        print(PRODUCT_LINK)
+
+        XML_URL = extract_xml_url("https://productscope.ai/post-sitemap.xml")
+        prompt_6 = f"""You are tasked with selecting 5 to 10 additional internal links for an article based on a given content outline and primary keyword. This task is crucial for improving the website's internal linking structure and enhancing the overall SEO performance. Follow these instructions carefully:
 
             First, review the content outline and primary keyword provided:
 
             <content_outline>
-            {{CONTENT_OUTLINE}}
+            {CONTENT_OUTLINE}
             </content_outline>
 
             <primary_keyword>
-            {{PRIMARY_KEYWORD}}
+            {PRIMARY_KEYWORD}
             </primary_keyword>
 
             Now, follow these steps to select the internal links:
 
-            1. Access the sitemap by visiting this URL: https://productscope.ai/post-sitemap.xml
+            1. Additional URLs from Sitemap:
+            {XML_URL}
 
             2. Carefully review the sitemap and identify 5-10 blog pages that are closely related to the main topic outlined in the content outline and primary keyword. Consider the following criteria:
             - Relevance to the main topic
@@ -363,14 +540,17 @@ def main():
 
             Remember, the goal is to enhance the article's value and improve internal linking, so choose links that genuinely complement the content outlined in the provided structure."""
         
-        prompt_7 = """You will be creating a compelling introduction for a blog post using the PAS (Problem-Agitate-Solution) Framework. Here's the content outline and title options for the blog post:
+        INTERNAL_LINKS = llm_bot(prompt_6, "gpt-4o")
+        print(INTERNAL_LINKS)
+
+        prompt_7 = f"""You will be creating a compelling introduction for a blog post using the PAS (Problem-Agitate-Solution) Framework. Here's the content outline and title options for the blog post:
 
             <content_outline>
-            {{CONTENT_OUTLINE}}
+            {CONTENT_OUTLINE}
             </content_outline>
 
             <title_options>
-            {{TITLE_OPTIONS}}
+            {TITLE_OPTIONS}
             </title_options>
 
             The PAS Framework consists of three elements:
@@ -389,50 +569,53 @@ def main():
 
             Remember to maintain a tone that matches the blog post's intended style and audience."""
         
-        prompt_8 = """You are an expert content writer tasked with creating high-quality, original content based on the provided information. Your goal is to produce an article that is informative, engaging, and optimized for search engines while maintaining a natural, conversational tone.
+        INTRODUCTION = llm_bot(prompt_7, "claude-3-5-sonnet-20240620")
+        print(INTRODUCTION)
+
+        prompt_8 = f"""You are an expert content writer tasked with creating high-quality, original content based on the provided information. Your goal is to produce an article that is informative, engaging, and optimized for search engines while maintaining a natural, conversational tone.
 
             Here's the content outline you'll be working with:
             <content_outline>
-            {{CONTENT_OUTLINE}}
+            {CONTENT_OUTLINE}
             </content_outline>
 
             Choose the most appropriate title from the following options:
             <title_options>
-            {{TITLE_OPTIONS}}
+            {TITLE_OPTIONS}
             </title_options>
 
             Select the title that best captures the essence of the content and incorporates the primary keyword naturally. Place your chosen title at the beginning of your article.
 
             The primary keyword for this article is:
-            <primary_keyword>{{PRIMARY_KEYWORD}}</primary_keyword>
+            <primary_keyword>{PRIMARY_KEYWORD}</primary_keyword>
 
             Incorporate this keyword naturally throughout the content, especially in the introduction and conclusion.
 
             Here are the secondary keywords to include:
             <secondary_keywords>
-            {{SECONDARY_KEYWORDS}}
+            {SECONDARY_KEYWORDS}
             </secondary_keywords>
 
             Integrate these secondary keywords throughout the article where they fit naturally and add value to the content.
 
             Here's the introduction you will be using in this article:
             <introduction>
-            {{INTRODUCTION}}
+            {INTRODUCTION}
             </introduction>
 
 
             You should include the following product link in your content:
-            <product_link>{{PRODUCT_LINK}}</product_link>
+            <product_link>{PRODUCT_LINK}</product_link>
 
             Incorporate this link naturally within the content where it's most relevant and valuable to the reader.
 
             The meta description for this article is:
-            <meta_description>{{META_DESCRIPTION}}</meta_description>
+            <meta_description>{META_DESCRIPTION}</meta_description>
 
             Use this as a guide for the overall focus and tone of your article.
 
             The desired word count for this article is:
-            <word_count>{{DESIRED_WORD_COUNT}}</word_count>
+            <word_count>{DESIRED_WORD_COUNT}</word_count>
 
             Now, follow these steps to write the content:
 
@@ -451,22 +634,25 @@ def main():
 
             Present your completed article within <article> tags."""
         
-        prompt_9 = """You are an expert SEO optimizer. Your task is to optimize an article for search engines while maintaining readability and user experience. You will be provided with an article, a primary keyword, secondary keywords, and internal links. Follow these steps to optimize the article:
+        ARTICLE = llm_bot(prompt_8, "claude-3-5-sonnet-20240620")
+        print(ARTICLE)
+
+        prompt_9 = f"""You are an expert SEO optimizer. Your task is to optimize an article for search engines while maintaining readability and user experience. You will be provided with an article, a primary keyword, secondary keywords, and internal links. Follow these steps to optimize the article:
 
             1. Review the following inputs:
 
             <article>
-            {{ARTICLE}}
+            {ARTICLE}
             </article>
 
-            <primary_keyword>{{PRIMARY_KEYWORD}}</primary_keyword>
+            <primary_keyword>{PRIMARY_KEYWORD}</primary_keyword>
 
             <secondary_keywords>
-            {{SECONDARY_KEYWORDS}}
+            {SECONDARY_KEYWORDS}
             </secondary_keywords>
 
             <internal_links>
-            {{INTERNAL_LINKS}}
+            {INTERNAL_LINKS}
             </internal_links>
 
             2. Analyze the article and keywords:
@@ -507,6 +693,9 @@ def main():
             </optimized_article>
 
             Remember to always prioritize readability and user experience over keyword density. The optimized article should flow naturally and provide value to the reader while also being optimized for search engines."""
+
+        optimized_article = llm_bot(prompt_9, "claude-3-5-sonnet-20240620")
+        print(optimized_article)
 
     else:
         print("Error performing search")
