@@ -19,8 +19,7 @@ def extract_xml_url(sitemap_url):
     namespace = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
     urls = [url.find('ns:loc', namespace).text for url in root.findall('ns:url', namespace)]
     return urls
-'''
-import axios from 'axios';
+'''import axios from 'axios';
 import { JSDOM } from 'jsdom';
 
 async function extractXmlUrl(sitemapUrl) {
@@ -40,8 +39,7 @@ async function extractXmlUrl(sitemapUrl) {
     }
 }
 
-extractXmlUrl('https://productscope.ai/post-sitemap.xml').then(urls => console.log(urls));
-'''
+extractXmlUrl('https://productscope.ai/post-sitemap.xml').then(urls => console.log(urls));'''
 
 def fetch_url_content(url):
     with sync_playwright() as p:
@@ -63,8 +61,8 @@ def fetch_url_content(url):
         except Exception as e:
             browser.close()
             return f"Error fetching content from URL: {e}"
-'''
-import axios from 'axios';
+
+'''import axios from 'axios';
 import cheerio from 'cheerio';
 
 async function fetchUrlContent(url) {
@@ -81,8 +79,7 @@ async function fetchUrlContent(url) {
     } catch (error) {
         return `Error fetching content from URL: ${error.message}`;
     }
-}
-'''
+}'''
 
 def google_search(query, api_key, cse_id, num_results=3):
     exclude_domains = ["youtube.com", "reddit.com"]
@@ -103,8 +100,7 @@ def google_search(query, api_key, cse_id, num_results=3):
     else:
         print(f"Error: {response.status_code}")
         return None
-'''
-async function googleSearch(query, apiKey, cseId, numResults = 3) {
+'''async function googleSearch(query, apiKey, cseId, numResults = 3) {
     const excludeDomains = ["youtube.com", "reddit.com"];
     const url = "https://www.googleapis.com/customsearch/v1";
     const params = {
@@ -126,8 +122,7 @@ async function googleSearch(query, apiKey, cseId, numResults = 3) {
         console.error(`Error: ${error.response ? error.response.status : error.message}`);
         return null;
     }
-}
-'''
+}'''
 
 def llm_bot(prompt, model):
     if model == "gpt-4o-mini":
@@ -161,8 +156,9 @@ def llm_bot(prompt, model):
             ]
         )
         return response.content[0].text
-'''
-import OpenAI from 'openai';
+    else:
+        print("Unknown model type")
+'''import OpenAI from 'openai';
 import Anthropic from 'anthropic';
 
 const openai = new OpenAI({ apiKey: 'YOUR_OPENAI_API_KEY' });
@@ -199,17 +195,16 @@ async function llmBot(prompt, model) {
         console.error("Error in llmBot:", error.message);
         throw error;
     }
-}
-'''
+}'''
 
 def main():
     PRIMARY_KEYWORD = input("Enter Primary Keyword: ")
     SECONDARY_KEYWORDS = input("Enter Secondary Keywords: ")
     results = google_search(PRIMARY_KEYWORD, api_key, cse_id)
-
+    results = True
     search_results = []
-    '''
-    (async function main() {
+    
+    '''(async function main() {
         const apiKey = 'YOUR_API_KEY'; 
         const cseId = 'YOUR_CSE_ID';   
 
@@ -236,8 +231,8 @@ def main():
         }
 
         console.log(search_results);
-    })();
-    '''
+    })();'''
+    
     if results:
         for item in results.get('items', []):
             title = item['title']
@@ -305,16 +300,16 @@ def main():
 
             Begin your analysis now, and present your findings as instructed above sequentially."""
         
-        TOP_5_ARTICLES_SUMMARY = llm_bot(prompt, "gpt-4o-mini")
+        TOP_5_ARTICLES_SUMMARY = llm_bot(prompt_1, "gpt-4o-mini")
         print(TOP_5_ARTICLES_SUMMARY)
         pattern = re.compile(r"<target_article_word_count>(\d+)</target_article_word_count>")
         match = pattern.search(TOP_5_ARTICLES_SUMMARY)
         if match:
             DESIRED_WORD_COUNT = match.group(1)
-            print("Target Article Word Count:", target_word_count)
+            print("Target Article Word Count:", DESIRED_WORD_COUNT)
         else:
             print("Target Article Word Count not found.")
-        
+
         prompt_2 = f"""You are an expert content researcher and outline creator. Your task is to analyze the summary of the top 5 articles for a given primary search query, the secondary keywords and then create an improved blog outline for a new article to rank for that search query. Follow these steps carefully:
 
             1. Review the primary search query:
@@ -602,7 +597,6 @@ def main():
             <introduction>
             {INTRODUCTION}
             </introduction>
-
 
             You should include the following product link in your content:
             <product_link>{PRODUCT_LINK}</product_link>
