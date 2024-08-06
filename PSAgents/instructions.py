@@ -246,6 +246,7 @@ def main():
             }
             search_results.append(result)
         
+        #Step 1
         prompt_1 = f"""You are an expert SEO analyst tasked with analyzing the top 3 SERP (Search Engine Results Page) results for a given primary keyword. Your goal is to provide valuable insights into the content structure, themes, and search intent for each result. Follow these instructions carefully:
 
             1. The primary keyword for analysis is:
@@ -310,6 +311,26 @@ def main():
         else:
             print("Target Article Word Count not found.")
 
+        '''
+        const TOP_5_ARTICLES_SUMMARY = `
+            <some_xml>
+                <target_article_word_count>1234</target_article_word_count>
+                <other_data>...</other_data>
+            </some_xml>
+        `;
+
+        const pattern = /<target_article_word_count>(\d+)<\/target_article_word_count>/;
+        const match = TOP_5_ARTICLES_SUMMARY.match(pattern);
+
+        if (match) {
+            const DESIRED_WORD_COUNT = match[1];
+            console.log("Target Article Word Count:", DESIRED_WORD_COUNT);
+        } else {
+            console.log("Target Article Word Count not found.");
+        }
+        '''
+
+        #Step 2
         prompt_2 = f"""You are an expert content researcher and outline creator. Your task is to analyze the summary of the top 5 articles for a given primary search query, the secondary keywords and then create an improved blog outline for a new article to rank for that search query. Follow these steps carefully:
 
             1. Review the primary search query:
@@ -358,6 +379,7 @@ def main():
         CONTENT_OUTLINE = llm_bot(prompt_2, "gpt-4o")
         print(CONTENT_OUTLINE)
 
+        #Step 3
         prompt_3 = f"""You are an expert title creator tasked with generating compelling and effective titles for content. Your goal is to create 3-5 unique title options that will grab attention, incorporate primary keywords, and appeal to the target audience. Follow these instructions carefully to produce high-quality title options.
 
             First, review the following inputs:
@@ -403,6 +425,7 @@ def main():
         TITLE_OPTIONS = llm_bot(prompt_3, "gpt-4o")
         print(TITLE_OPTIONS)
 
+        #Step 4
         prompt_4 = f"""You are an expert at crafting compelling meta descriptions for web content. Your task is to create a meta description that accurately summarizes the given content, includes the primary keyword, and entices users to click through to the webpage.
 
             Here is the content to summarize:
@@ -434,6 +457,7 @@ def main():
         META_DESCRIPTION = llm_bot(prompt_4, "gpt-4o")
         print(META_DESCRIPTION)
 
+        #Step 5
         prompt_5 = f"""You are an expert at selecting the most relevant internal product link for a blog post based on its content outline and primary keyword. Your task is to review the given information and choose the most appropriate internal link from a list of product landing pages.
 
             First, carefully review the following information:
@@ -487,6 +511,7 @@ def main():
         PRODUCT_LINK = llm_bot(prompt_5, "gpt-4o")
         print(PRODUCT_LINK)
 
+        #Step 6
         XML_URL = extract_xml_url("https://productscope.ai/post-sitemap.xml")
         prompt_6 = f"""You are tasked with selecting 5 to 10 additional internal links for an article based on a given content outline and primary keyword. This task is crucial for improving the website's internal linking structure and enhancing the overall SEO performance. Follow these instructions carefully:
 
@@ -538,6 +563,7 @@ def main():
         INTERNAL_LINKS = llm_bot(prompt_6, "gpt-4o")
         print(INTERNAL_LINKS)
 
+        #Step 7
         prompt_7 = f"""You will be creating a compelling introduction for a blog post using the PAS (Problem-Agitate-Solution) Framework. Here's the content outline and title options for the blog post:
 
             <content_outline>
@@ -567,6 +593,7 @@ def main():
         INTRODUCTION = llm_bot(prompt_7, "claude-3-5-sonnet-20240620")
         print(INTRODUCTION)
 
+        #Step 8
         prompt_8 = f"""You are an expert content writer tasked with creating high-quality, original content based on the provided information. Your goal is to produce an article that is informative, engaging, and optimized for search engines while maintaining a natural, conversational tone.
 
             Here's the content outline you'll be working with:
@@ -631,6 +658,7 @@ def main():
         ARTICLE = llm_bot(prompt_8, "claude-3-5-sonnet-20240620")
         print(ARTICLE)
 
+        #Step 9
         prompt_9 = f"""You are an expert SEO optimizer. Your task is to optimize an article for search engines while maintaining readability and user experience. You will be provided with an article, a primary keyword, secondary keywords, and internal links. Follow these steps to optimize the article:
 
             1. Review the following inputs:
