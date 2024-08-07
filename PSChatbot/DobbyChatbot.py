@@ -65,20 +65,8 @@ def create_document_assistant(client, file_path):
 
     if file_extension.lower() in condition_1_extensions:
         assistant_type = 1
-        with open(file_path, 'rb') as file:
-            content = file.read()
-
-        # Try to decode the content to UTF-8 if it's expected to be text
-        try:
-            content = content.decode('utf-8')
-            byte_stream = io.BytesIO(content.encode('utf-8'))
-        except UnicodeDecodeError:
-            # If decoding fails, keep the content as is
-            byte_stream = io.BytesIO(content)
-
-        # Pass the byte stream to the function
         file = client.files.create(
-            file=byte_stream,
+            file=open(file_path, "rb"),
             purpose='assistants' # Assistants are used for file
         )
 
@@ -170,6 +158,7 @@ def main():
         try:
             # User will ask Questions here
             user_query = input("\nYou: ")
+            
             if user_query.lower() == "exit":
                 print("Ending the chat.")
                 break
@@ -329,7 +318,7 @@ def main():
                         )
                     
                     else:
-                        # Thread and run created for Image based chat without asin
+                        # Thread and run created for File based chat without asin
                         message = client.beta.threads.messages.create(
                             thread_id=thread.id,
                             role="user",
@@ -465,7 +454,6 @@ def main():
         except Exception as e:
             print("I am sorry I could not get you. Could you please try again?")
             print(f"{e}")
-    
 
     # Segment to delete Assistant, Thread, File applicable for Pro user when they close the chat
     try:
