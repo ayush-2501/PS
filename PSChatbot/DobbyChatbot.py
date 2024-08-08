@@ -95,6 +95,56 @@ def create_document_assistant(client, file_path):
         )
     return assistant, file, assistant_type
 
+'''
+const fs = require('fs');
+const { OpenAI } = require('openai');
+require('dotenv').config();
+
+const client = new OpenAI();
+
+async function createDocumentAssistant(client, filePath) {
+    const fileExtension = filePath.split('.').pop().toLowerCase();
+    const condition1Extensions = ['pdf', 'csv', 'xlsx'];
+    let assistantType;
+    let file;
+    let assistant;
+
+    if (condition1Extensions.includes(fileExtension)) {
+        assistantType = 1;
+        file = await client.files.create({
+            file: fs.createReadStream(filePath),
+            purpose: 'assistants'
+        });
+
+        const instructions = "You are a helpful assistant. You are always friendly, kind, and inspiring, and eager to provide vivid and thoughtful responses to the user. You'll be provided with data. Your job is to answer the questions based on that data.";
+        assistant = await client.beta.assistants.create({
+            name: "Dobby",
+            instructions: instructions,
+            model: "gpt-4o",
+            tools: [{"type": "code_interpreter"}],
+            tool_resources: {"code_interpreter": {"file_ids": [file.id]}},
+            temperature: 0.0
+        });
+    } else {
+        assistantType = 2;
+        file = await client.files.create({
+            file: fs.createReadStream(filePath),
+            purpose: 'vision'
+        });
+
+        const instructions = "You are a helpful assistant. You are always friendly, kind, and inspiring, and eager to provide vivid and thoughtful responses to the user. You'll be provided with data. Your job is to answer the questions based on that data.";
+        assistant = await client.beta.assistants.create({
+            name: "Dobby",
+            instructions: instructions,
+            model: "gpt-4o",
+            tools: [{"type": "code_interpreter"}],
+            temperature: 0.0
+        });
+    }
+    return { assistant, file, assistantType };
+}
+'''
+
 def fetch_url_content(url):
     with sync_playwright() as p:
         browser = p.chromium.launch()
